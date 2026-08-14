@@ -8,7 +8,8 @@ from app.logger import logger
 
 if __name__ == "__main__":
     logger.info(
-        f"Starting {settings.PROJECT_NAME} on http://{settings.HOST}:{settings.PORT}..."
+        f"Starting {settings.PROJECT_NAME} on \
+        http://{settings.HOST}:{settings.PORT}..."
     )
     uvicorn.run(
         "api.main:app",
