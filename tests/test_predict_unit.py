@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from api.routers.predict import predict_price
 from api.schemas import HouseFeaturesRequest
 
-# Unit test of the schema
+# Unit test for the schema validation
 
 def test_invalid_ocean_proximity():
     with pytest.raises(ValidationError):
@@ -23,7 +23,8 @@ def test_invalid_ocean_proximity():
             population=500,
             households=100,
             median_income=5.0,
-            ocean_proximity=True # ocean_proximity is a string field but boolean value provided
+            # ocean_proximity is a string field but boolean value provided
+            ocean_proximity=True 
         )
 
 def test_missing_required_field():
