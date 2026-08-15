@@ -21,6 +21,10 @@ class DataPreparation:
     def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
         logger.info("Starting data cleaning phase...")
         df = df.drop_duplicates()
+
+        # Log missing value report
+        missing_percentage = df.isnull().sum()
+        logger.info(f"Missing Values: \n{missing_percentage}")
         
         # Impute missing total_bedrooms with median (only column with nulls)
         if "total_bedrooms" in df.columns:
