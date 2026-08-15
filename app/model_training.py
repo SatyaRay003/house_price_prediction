@@ -8,8 +8,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
 import matplotlib
-
-matplotlib.use("Agg")  # Non-interactive backend for headless server execution
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -20,6 +18,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from app.logger import logger
 from utils import get_short_path
 
+matplotlib.use("Agg")  # Non-interactive backend for headless server execution
 
 class ModelTrainer:
     """Handles training, evaluating, persisting regression models, and generating report figures."""
@@ -31,35 +30,68 @@ class ModelTrainer:
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.figures_dir, exist_ok=True)
 
-        logger.info(f"Initialized ModelTrainer - Models Dir: {get_short_path(self.models_dir)}")
-        logger.info(f"Initialized ModelTrainer - Figures Dir: {get_short_path(self.figures_dir)}")
+        logger.info(
+            "Initialized ModelTrainer - Models Dir: %s", get_short_path(self.models_dir)
+        )
+        logger.info(
+            "Initialized ModelTrainer - Figures Dir: %s", get_short_path(self.figures_dir)
+        )
 
         self.models: Dict[str, Any] = {}
         self.metrics: Dict[str, Dict[str, Any]] = {}
         self.predictions: Dict[str, np.ndarray] = {}  # Stores evaluation predictions
 
     def train_linear_regression(
-        self, X_train: np.ndarray, y_train: pd.Series
+        self, X_train: np.ndarray, y_train: pd.Series # pylint: disable=invalid-name
     ) -> LinearRegression:
+        """
+        Train a Linear Regression model using the provided training data.
+
+        Args:
+            X_train: Training feature matrix.
+            y_train: Training target values.
+
+        Returns:
+            The trained LinearRegression model.
+
+        Raises:
+            Exception: If model training fails.
+        """
         logger.info("Training Linear Regression model...")
         try:
             model = LinearRegression()
-            model.fit(X_train, y_train)
+            model.fit(X_train, y_train) # pylint: disable=invalid-name
             self.models["linear_regression"] = model
             logger.info("Linear Regression training completed successfully.")
             return model
         except Exception as e:
-            logger.error(f"Failed to train Linear Regression model: {str(e)}")
+            logger.error("Failed to train Linear Regression model: %s", str(e))
             raise
 
     def train_random_forest(
         self,
-        X_train: np.ndarray,
+        X_train: np.ndarray, # pylint: disable=invalid-name
         y_train: pd.Series,
         n_estimators: int = 200,
         max_depth: int = 12,
         random_state: int = 42,
     ) -> RandomForestRegressor:
+        """
+        Train a Random Forest Regressor using the provided training data.
+
+        Args:
+            X_train: Training feature matrix.
+            y_train: Training target values.
+            n_estimators: Number of trees in the forest.
+            max_depth: Maximum depth of each decision tree.
+            random_state: Seed used to ensure reproducible results.
+
+        Returns:
+            The trained RandomForestRegressor model.
+
+        Raises:
+            Exception: If model training fails.
+        """
         logger.info("Training Random Forest Regressor model...")
         try:
             model = RandomForestRegressor(
@@ -68,23 +100,43 @@ class ModelTrainer:
                 random_state=random_state,
                 n_jobs=-1,
             )
-            model.fit(X_train, y_train)
+            model.fit(X_train, y_train) # pylint: disable=invalid-name
             self.models["random_forest"] = model
             logger.info("Random Forest training completed successfully.")
             return model
         except Exception as e:
-            logger.error(f"Failed to train Random Forest model: {str(e)}")
+            logger.error("Failed to train Random Forest model: %s", str(e))
             raise
 
     def evaluate_model(
-        self, model_name: str, X_test: np.ndarray, y_test: pd.Series
+        self, model_name: str,
+        X_test: np.ndarray, # pylint: disable=invalid-name
+        y_test: pd.Series
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        
+        """
+        Evaluate a trained model using test data.
+
+        Generates predictions and calculates Mean Absolute Error (MAE),
+        Root Mean Squared Error (RMSE), and R-squared (R2). The predictions
+        and evaluation metrics are stored for later use.
+
+        Args:
+            model_name: Name of the trained model to evaluate.
+            X_test: Test feature matrix.
+            y_test: Actual target values for the test dataset.
+
+        Returns:
+            A tuple containing the model predictions and evaluation metrics.
+
+        Raises:
+            ValueError: If the specified model has not been trained.
+        """
+
         if model_name not in self.models:
-            logger.error(f"Model '{model_name}' has not been trained yet.")
+            logger.error("Model %s has not been trained yet.", model_name)
             raise ValueError(f"Model '{model_name}' is not available in trainer.")
 
-        logger.info(f"Evaluating model performance: {model_name}")
+        logger.info("Evaluating model performance: %s", model_name)
         model = self.models[model_name]
         predictions = model.predict(X_test)
 
@@ -103,36 +155,48 @@ class ModelTrainer:
         }
 
         self.metrics[model_name] = metrics_dict
-        logger.info(
-            f"[{model_name}] -> MAE: {mae:.2f} | RMSE: {rmse:.2f} | R2: {r2:.4f}"
-        )
+        logger.info("[%s] -> MAE: %.2f | RMSE: %.2f | R2: %.4f", model_name, mae, rmse, r2)
 
         return predictions, metrics_dict
 
     def save_models_and_metrics(self) -> None:
+        """
+        Save all trained models and their evaluation metrics to disk.
+
+        Each trained model is serialized as a Joblib file in the configured
+        models directory. Available evaluation metrics are saved as a JSON file.
+
+        Raises:
+            Exception: If a model or metrics file cannot be saved.
+        """
         if not self.models:
             logger.warning("No models found to dump/persist.")
             return
 
-        logger.info(f"Saving trained models to directory: {get_short_path(self.models_dir)}")
+        logger.info(
+            "Saving trained models to directory: %s",
+            get_short_path(self.models_dir)
+        )
         for name, model in self.models.items():
             file_path = os.path.join(self.models_dir, f"{name}.joblib")
             try:
                 joblib.dump(model, file_path)
-                logger.info(f"Dumped model artifact: {get_short_path(file_path)}")
+                logger.info("Dumped model artifact: %s", get_short_path(file_path))
             except Exception as e:
-                logger.error(f"Failed to save model '{name}': {str(e)}")
+                logger.error("Failed to save model '%s': %s", name, str(e))
                 raise
 
         if self.metrics:
             metrics_path = os.path.join(self.models_dir, "metrics.json")
             try:
                 metrics_list = list(self.metrics.values())
-                with open(metrics_path, "w") as f:
+                with open(metrics_path, "w", encoding="utf-8") as f:
                     json.dump(metrics_list, f, indent=2)
-                logger.info(f"Saved evaluation metrics report to: {get_short_path(metrics_path)}")
+                logger.info(
+                    "Saved evaluation metrics report to: %s", get_short_path(metrics_path)
+                )
             except Exception as e:
-                logger.error(f"Failed to write metrics report: {str(e)}")
+                logger.error("Failed to write metrics report: %s", str(e))
                 raise
 
     def generate_visualizations(
@@ -176,7 +240,7 @@ class ModelTrainer:
                 )
                 plt.savefig(rf_actual_vs_pred_path, dpi=150)
                 plt.close()
-                logger.info(f"Saved plot: {get_short_path(rf_actual_vs_pred_path)}")
+                logger.info("Saved plot: %s", get_short_path(rf_actual_vs_pred_path))
 
             # (b) Feature importance
             if "random_forest" in self.models:
@@ -201,7 +265,9 @@ class ModelTrainer:
                 )
                 plt.savefig(img_importance_path, dpi=150)
                 plt.close()
-                logger.info(f"Saved feature importances: {get_short_path(img_importance_path)}")
+                logger.info(
+                    "Saved feature importances: %s", get_short_path(img_importance_path)
+                )
 
             # (c) Model comparison bar chart
             if self.metrics:
@@ -219,7 +285,9 @@ class ModelTrainer:
                 comp_path = os.path.join(self.figures_dir, "model_comparison.png")
                 plt.savefig(comp_path, dpi=150)
                 plt.close()
-                logger.info(f"Saved model comparison chart: {get_short_path(comp_path)}")
+                logger.info(
+                    "Saved model comparison chart: %s", get_short_path(comp_path)
+                )
 
             # (d) Target distribution after cleaning
             if target_col in df_cleaned.columns:
@@ -229,16 +297,17 @@ class ModelTrainer:
                 plt.xlabel("Median House Value (US$)")
                 plt.ylabel("Frequency")
                 plt.tight_layout()
-                dist_path = os.path.join(
-                    self.figures_dir, "target_distribution.png"
-                )
+                dist_path = os.path.join(self.figures_dir, "target_distribution.png")
                 plt.savefig(dist_path, dpi=150)
                 plt.close()
-                logger.info(f"Saved target distribution chart: {get_short_path(dist_path)}")
+                logger.info(
+                    "Saved target distribution chart: %s", get_short_path(dist_path)
+                )
 
-            logger.info(f"All figures successfully saved to: {get_short_path(self.figures_dir)}")
+            logger.info(
+                "All figures successfully saved to: %s", get_short_path(self.figures_dir)
+            )
 
         except Exception as e:
-            logger.error(f"Failed to generate visualization figures: {str(e)}")
+            logger.error("Failed to generate visualization figures: %s", str(e))
             raise
-        
